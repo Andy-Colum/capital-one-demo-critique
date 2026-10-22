@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Goal Planner Prototype – Design Critique</title>
+<style>
+  :root {
+    --page: #f0eeee;
+    --surface: #ffffff;
+    --ink: #1f2328;
+    --muted: #5c6470;
+    --line: #dcdcdc;
+    --link: #255f85;
+    --navy: #0e3a57;
+    --navy-2: #134a6b;
+    --red: #a83a2a;
+    --orange: #c8622f;
+    --slate: #5d6b7a;
+    --teal: #0f5f6e;
+    --banner: #f3ede4;
+    --good: #2e8b57;
+    --warn: #b5462b;
+    --focus: #1a73c9;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #15181c;
+      --surface: #1f2329;
+      --ink: #e9ecef;
+      --muted: #a4adb8;
+      --line: #343a42;
+      --link: #7fb6dc;
+      --banner: #2a2622;
+      --good: #5cc18a;
+      --warn: #ee7d62;
+      --focus: #6fb1f0;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Optima, Candara, "Noto Sans", sans-serif; background: var(--page); color: var(--ink); }
+  button, input, select { font: inherit; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  a { color: var(--link); }
+
+  /* Prototype control bar */
+  .proto-bar { background: #222831; color: #fff; display: flex; gap: 16px; align-items: center; justify-content: center; padding: 8px 16px; font-size: 14px; flex-wrap: wrap; }
+  .proto-bar .seg { display: inline-flex; border: 1px solid #6b7480; border-radius: 6px; overflow: hidden; }
+  .proto-bar .seg button { background: transparent; color: #fff; border: 0; padding: 6px 14px; cursor: pointer; }
+  .proto-bar .seg button[aria-pressed="true"] { background: #fff; color: #222831; font-weight: 600; }
+
+  header.top { background: var(--surface); border-bottom: 1px solid var(--line); }
+  .top-inner { max-width: 1040px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
+  .wordmark { font-weight: 700; font-size: 20px; color: var(--navy); letter-spacing: -0.3px; }
+  @media (prefers-color-scheme: dark) { .wordmark { color: #cfe3f1; } }
+  .wordmark span { color: var(--red); font-style: italic; }
+  .user { display: flex; gap: 18px; align-items: center; font-size: 15px; color: var(--muted); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #9aa6b2; display: inline-grid; place-items: center; color: #fff; font-weight: 600; margin-right: 6px; }
+
+  .referral { background: var(--banner); text-align: center; padding: 34px 20px; font-size: 21px; font-weight: 300; }
+  .referral a { display: block; font-weight: 600; margin-top: 6px; text-decoration: none; }
+
+  main { max-width: 1040px; margin: 0 auto; padding: 16px 20px 60px; }
+  .accounts { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .acct { color: #fff; min-height: 210px; padding: 22px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,.25); }
+  .acct.navy { background: linear-gradient(160deg, var(--navy-2), var(--navy) 70%); }
+  .acct.red { background: linear-gradient(170deg, #8d3326, var(--orange)); }
+  .acct.slate { background: linear-gradient(170deg, #4c5866, #77828f); }
+  .acct h3 { margin: 0; font-weight: 400; font-size: 21px; }
+  .acct h3 small { font-size: 13px; font-weight: 600; }
+  .bal { font-size: 34px; margin: 14px 0 2px; }
+  .bal sup { font-size: 16px; }
+  .bal-label { font-size: 11px; font-weight: 600; }
+  .acct .view, .rewards .view { position: absolute; top: 52px; right: 22px; background: transparent; color: #fff; border: 1px solid #fff; padding: 9px 28px; font-size: 16px; cursor: pointer; }
+  .chip { margin-top: 34px; display: inline-block; border: 1px solid #fff; border-radius: 3px; background: transparent; color: #fff; font-size: 12px; padding: 5px 12px; cursor: pointer; }
+  .rewards { background: var(--teal); color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.25); display: flex; flex-direction: column; }
+  .rewards .rtop { padding: 22px; position: relative; flex: 1; }
+  .rewards .rtop p { margin: 0; font-weight: 600; font-size: 14px; }
+  .rewards .rbot { background: #0f2c40; display: flex; justify-content: space-around; padding: 12px; font-size: 13px; font-weight: 600; }
+  .explore { background: #e7e7e7; padding: 22px; min-height: 160px; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  @media (prefers-color-scheme: dark) { .explore { background: #2a2f36; } }
+  .explore h3 { margin: 6px 0 10px; font-size: 18px; }
+  .explore p { margin: 0; max-width: 240px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+  .explore button { position: absolute; top: 20px; right: 22px; background: transparent; border: 1px solid var(--ink); color: var(--ink); padding: 10px 16px; font-weight: 600; font-size: 14px; cursor: pointer; }
+
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 22px; }
+  .tile { background: var(--surface); border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.15); display: flex; flex-direction: column; min-height: 210px; }
+  .tile h4 { margin: 0; padding: 14px 12px 0; font-size: 14px; font-weight: 600; }
+  .tile .body { padding: 12px; flex: 1; font-size: 14px; line-height: 1.45; }
+  .tile .foot { border-top: 1px solid var(--line); text-align: center; padding: 12px; }
+  .linkbtn { background: none; border: 0; color: var(--link); cursor: pointer; font-weight: 600; font-size: 14px; padding: 0; }
+
+  .score { display: flex; gap: 14px; align-items: flex-start; }
+  .ring { width: 92px; height: 92px; flex: none; border-radius: 50%; background: conic-gradient(#8bc34a 0 75%, #ddd 75% 100%); display: grid; place-items: center; }
+  .ring div { width: 78px; height: 78px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; text-align: center; line-height: 1; }
+  .ring b { font-size: 30px; font-weight: 400; display: block; }
+  .ring small { font-size: 9px; }
+  .vcard { display: flex; gap: 14px; align-items: center; }
+  .cardart { width: 96px; height: 60px; flex: none; border-radius: 6px; background: linear-gradient(160deg, #f3f5f8, #dfe4ea); position: relative; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .cardart::before { content: ""; position: absolute; left: 12px; top: 24px; width: 14px; height: 10px; background: #e6c229; border-radius: 2px; }
+  .cardart::after { content: ""; position: absolute; left: 0; right: 0; bottom: 8px; height: 6px; background: #1e3550; }
+  .offers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .offer { border: 1px solid var(--line); padding: 6px 4px; text-align: center; font-size: 12px; }
+  .offer .badge { display: inline-block; background: #e1eef8; color: #255f85; font-size: 11px; padding: 1px 6px; border-radius: 3px; float: left; }
+  .offer .store { clear: both; font-weight: 800; font-size: 15px; padding: 10px 0 6px; }
+  .map { flex: 1; background: repeating-linear-gradient(35deg, #e4e4e4 0 30px, #ececec 30px 34px); position: relative; min-height: 160px; }
+  .map::after { content: "Branch"; position: absolute; left: 45%; top: 40%; background: #fbe7c6; padding: 30px 40px; font-size: 13px; color: #444; }
+
+  /* Goal planner tile — the proposed addition */
+  .goal { outline: 2px solid var(--red); outline-offset: -2px; }
+  .goal .new { background: var(--red); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-left: 6px; vertical-align: 1px; }
+  .goal label { display: block; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .goal input, .goal select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 3px; margin-top: 2px; }
+  .goal .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .goal .err { color: var(--warn); font-size: 12px; min-height: 16px; margin-top: 4px; }
+  .empty-slot { border: 2px dashed var(--line); border-radius: 3px; display: grid; place-items: center; color: var(--muted); font-size: 13px; text-align: center; padding: 20px; }
+
+  /* Modal */
+  .scrim { position: fixed; inset: 0; background: rgba(10, 20, 30, .55); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .scrim.open { display: flex; }
+  .modal { background: var(--surface); width: min(640px, 100%); max-height: 92vh; overflow: auto; border-radius: 6px; box-shadow: 0 10px 40px rgba(0,0,0,.35); animation: rise .2s ease-out; }
+  @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .modal { animation: none; } }
+  .mhead { padding: 20px 24px 8px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .mhead h2 { margin: 0; font-size: 22px; }
+  .mhead p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  .close { background: none; border: 0; font-size: 26px; line-height: 1; cursor: pointer; color: var(--muted); }
+  .mbody { padding: 8px 24px 24px; }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 8px 0 18px; }
+  .fact { background: var(--page); padding: 12px; border-radius: 4px; }
+  .fact b { display: block; font-size: 22px; }
+  .fact span { font-size: 12px; color: var(--muted); }
+  .verdict { font-size: 15px; line-height: 1.5; margin: 0 0 16px; }
+  .paths { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .path { border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+  .path.rec { border: 2px solid var(--navy-2); }
+  @media (prefers-color-scheme: dark) { .path.rec { border-color: var(--link); } }
+  .path .tag { font-size: 12px; font-weight: 700; color: var(--good); min-height: 16px; }
+  .path h3 { margin: 0; font-size: 17px; }
+  .path p { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.45; }
+  .path .big { font-size: 24px; font-weight: 700; color: var(--ink); }
+  .path select { padding: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 3px; }
+  .primary { margin-top: auto; background: var(--navy-2); color: #fff; border: 0; padding: 11px 14px; border-radius: 4px; font-weight: 600; cursor: pointer; }
+  .secondary { margin-top: auto; background: transparent; color: var(--link); border: 1px solid var(--link); padding: 10px 14px; border-radius: 4px; font-weight: 600; cursor: pointer; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 14px; }
+  .done { text-align: center; padding: 30px 24px 34px; }
+  .done .check { width: 56px; height: 56px; border-radius: 50%; background: var(--good); color: #fff; display: grid; place-items: center; font-size: 30px; margin: 0 auto 12px; }
+  .done h2 { margin: 0 0 8px; }
+  .done p { color: var(--muted); max-width: 420px; margin: 0 auto 18px; line-height: 1.5; }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 820px) {
+    .accounts, .tiles { grid-template-columns: 1fr; }
+    .paths, .facts { grid-template-columns: 1fr; }
+    .acct .view, .rewards .view { position: static; margin-top: 14px; }
+    .explore button { position: static; margin-top: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="proto-bar" role="region" aria-label="Prototype controls">
+  <span>Design critique prototype</span>
+  <div class="seg" role="group" aria-label="Version">
+    <button id="btnBefore" aria-pressed="false">Current</button>
+    <button id="btnAfter" aria-pressed="true">Proposed</button>
+  </div>
+</div>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="wordmark">Demo<span>Bank</span></div>
+    <div class="user"><span>Need help?</span><span><span class="avatar">A</span>Andy</span></div>
+  </div>
+</header>
+
+<div class="referral">
+  Andy, share fee-free checking with a friend and earn $50 per referral.
+  <a href="#" onclick="return false">View details.</a>
+</div>
+
+<main>
+  <section class="accounts" aria-label="Accounts">
+    <div class="acct navy"><h3>Performance Savings <small>...3828</small></h3><div class="bal">$•,•••</div><div class="bal-label">Available balance</div><button class="view">View Account</button></div>
+    <div class="acct red"><h3>Dining Rewards Card <small>...3170</small></h3><div class="bal">$•••</div><div class="bal-label">Current balance</div><button class="view">View Account</button><button class="chip">Get your Virtual Card</button></div>
+    <div class="acct navy"><h3>Checking <small>...6032</small></h3><div class="bal">$•,•••</div><div class="bal-label">Available balance</div><button class="view">View Account</button><button class="chip">View your debit card</button></div>
+    <div class="acct navy"><h3>Savings <small>...5060</small></h3><div class="bal">$•,•••</div><div class="bal-label">Available balance</div><button class="view">View Account</button></div>
+    <div class="acct slate"><h3>Cash Back Card <small>...6576</small></h3><div class="bal">$0<sup>00</sup></div><div class="bal-label">Current balance</div><button class="view">View Account</button><button class="chip">Get your Virtual Card</button></div>
+    <div class="rewards"><div class="rtop"><p>Explore rewards and benefits</p><div class="bal">$28<sup>75</sup></div><div class="bal-label">Rewards cash</div><button class="view">View rewards</button></div><div class="rbot"><span>Travel</span><span>Entertainment</span></div></div>
+    <div class="explore"><h3>Explore other products</h3><p>Explore all our products now to find an account that's right for you.</p><button>Open a new account</button></div>
+  </section>
+
+  <section class="tiles" aria-label="Tools and offers">
+    <div class="tile"><h4>Credit score</h4><div class="body score"><div class="ring"><div><span><b>792</b><small>VERY GOOD</small></span></div></div><div>Knowledge is power. Don't let your credit report surprise you.<br><button class="linkbtn" style="margin-top:10px">Check your score</button></div></div></div>
+    <div class="tile"><h4>Virtual Cards</h4><div class="body vcard"><div class="cardart" aria-hidden="true"></div><div>Help keep your credit card account more secure by generating virtual cards for specific merchants.</div></div><div class="foot"><button class="linkbtn">Create &amp; Manage Virtual Cards</button></div></div>
+    <div class="tile"><h4>Safer checkout</h4><div class="body">Add your card and use virtual cards to shop online without giving stores your actual card number.</div><div class="foot" style="text-align:left"><button class="linkbtn">No, thanks</button> &nbsp;|&nbsp; <button class="linkbtn">Add now</button></div></div>
+    <div class="tile"><h4>Activate shopping offers</h4><div class="body"><div class="offers">
+      <div class="offer"><span class="badge">Bonus</span><div class="store">Store A</div>Spend $25, earn $5</div>
+      <div class="offer"><span class="badge">Bonus</span><div class="store">Store B</div>Spend $20, earn $10</div>
+      <div class="offer"><span class="badge">Bonus</span><div class="store">Store C</div>Spend $20, earn $10</div>
+    </div></div><div class="foot"><button class="linkbtn">View all offers</button></div></div>
+    <div class="tile"><h4>Branch / ATM Finder</h4><div class="map" aria-hidden="true"></div></div>
+
+    <div class="empty-slot hidden" id="emptySlot">This space is empty today.</div>
+
+    <div class="tile goal" id="goalTile">
+      <h4>Plan a goal <span class="new">New</span></h4>
+      <div class="body">
+        <div>What are you saving for?</div>
+        <label for="gName">Goal</label>
+        <input id="gName" value="Trip to China" />
+        <div class="row">
+          <div><label for="gAmt">Amount ($)</label><input id="gAmt" type="number" min="100" step="100" value="5000" /></div>
+          <div><label for="gMonths">By when</label>
+            <select id="gMonths">
+              <option value="6">6 months</option>
+              <option value="12" selected>12 months</option>
+              <option value="18">18 months</option>
+              <option value="24">2 years</option>
+              <option value="36">3 years</option>
+            </select></div>
+        </div>
+        <div class="err" id="gErr" role="alert"></div>
+      </div>
+      <div class="foot"><button class="linkbtn" id="buildPlan">Build my plan</button></div>
+    </div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="modal">
+    <div id="planView">
+      <div class="mhead">
+        <div><h2 id="mTitle">Your plan</h2><p>Based on the last 3 months in your linked accounts</p></div>
+        <button class="close" aria-label="Close" data-close>&times;</button>
+      </div>
+      <div class="mbody">
+        <div class="facts">
+          <div class="fact"><b id="fNeed"></b><span>needed each month</span></div>
+          <div class="fact"><b id="fNow"></b><span>you set aside today</span></div>
+          <div class="fact"><b id="fLeft"></b><span>left after spending</span></div>
+        </div>
+        <p class="verdict" id="verdict"></p>
+        <div class="paths">
+          <div class="path" id="pathSave">
+            <div class="tag" id="tagSave"></div>
+            <h3>Save for it</h3>
+            <div class="big" id="saveAmt"></div>
+            <p id="saveTxt"></p>
+            <button class="primary" id="ctaSave">Open a goal account</button>
+          </div>
+          <div class="path" id="pathLoan">
+            <div class="tag" id="tagLoan"></div>
+            <h3>Go sooner with a personal loan</h3>
+            <div class="big" id="loanPay"></div>
+            <p id="loanTxt"></p>
+            <label for="loanTerm" style="font-size:12px;color:var(--muted)">Repay over</label>
+            <select id="loanTerm"><option value="12">12 months</option><option value="24" selected>24 months</option><option value="36">36 months</option></select>
+            <button class="secondary" id="ctaLoan">Check my rate</button>
+          </div>
+        </div>
+        <p class="note">Prototype with sample data: income $4,800/mo, spending $4,150/mo, current savings $217/mo, sample APR 11.99%. Checking your rate wouldn't affect your credit score.</p>
+      </div>
+    </div>
+    <div id="doneView" class="done hidden">
+      <div class="check" aria-hidden="true">✓</div>
+      <h2 id="doneTitle"></h2>
+      <p id="doneTxt"></p>
+      <button class="primary" data-close>Back to home</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const DATA = { income: 4800, spending: 4150, saving: 217, apr: 0.1199 };
+  const $ = id => document.getElementById(id);
+  const money = n => "$" + Math.round(n).toLocaleString();
+  const addMonths = m => { const d = new Date(); d.setMonth(d.getMonth() + m); return d.toLocaleDateString(undefined, { month: "long", year: "numeric" }); };
+  const payment = (P, r, n) => { const i = r / 12; return P * i / (1 - Math.pow(1 + i, -n)); };
+
+  let plan = null;
+
+  function readGoal() {
+    const name = $("gName").value.trim() || "your goal";
+    const amt = Number($("gAmt").value);
+    const months = Number($("gMonths").value);
+    if (!amt || amt < 100) { $("gErr").textContent = "Enter an amount of $100 or more."; return null; }
+    $("gErr").textContent = "";
+    return { name, amt, months };
+  }
+
+  function render() {
+    const { name, amt, months } = plan;
+    const need = amt / months;
+    const left = DATA.income - DATA.spending;
+    const gap = need - DATA.saving;
+    const paceMonths = Math.ceil(amt / DATA.saving);
+    const fits = need <= left;
+
+    $("mTitle").textContent = "Your plan for " + name;
+    $("fNeed").textContent = money(need);
+    $("fNow").textContent = money(DATA.saving);
+    $("fLeft").textContent = money(left);
+
+    if (gap <= 0) {
+      $("verdict").textContent = `You're on track. At your current pace you'll reach ${money(amt)} by ${addMonths(paceMonths)}.`;
+    } else if (fits) {
+      $("verdict").textContent = `To reach ${money(amt)} by ${addMonths(months)}, set aside ${money(gap)} more each month. Saving at today's pace would take ${paceMonths} months.`;
+    } else {
+      $("verdict").textContent = `Reaching ${money(amt)} in ${months} months would take more than you have left after spending. Saving at today's pace would take ${paceMonths} months, or a loan could get you there now.`;
+    }
+
+    $("saveAmt").textContent = money(fits ? need : DATA.saving) + "/mo";
+    $("saveTxt").textContent = fits
+      ? `We'll move it automatically into a dedicated account for ${name}. Reach your goal by ${addMonths(months)}.`
+      : `Saving what you set aside today, you'd reach your goal by ${addMonths(paceMonths)}.`;
+
+    const term = Number($("loanTerm").value);
+    const pay = payment(amt, DATA.apr, term);
+    const total = pay * term;
+    $("loanPay").textContent = money(pay) + "/mo";
+    $("loanTxt").textContent = `Get ${money(amt)} now and repay over ${term} months. Total cost ${money(total)}, including ${money(total - amt)} in interest.`;
+
+    $("pathSave").classList.toggle("rec", fits);
+    $("pathLoan").classList.toggle("rec", !fits);
+    $("tagSave").textContent = fits ? "Recommended for you" : "";
+    $("tagLoan").textContent = fits ? "" : "Recommended for you";
+  }
+
+  function openModal() {
+    const g = readGoal(); if (!g) return;
+    plan = g;
+    $("planView").classList.remove("hidden");
+    $("doneView").classList.add("hidden");
+    render();
+    $("scrim").classList.add("open");
+    $("scrim").querySelector(".close").focus();
+  }
+  function closeModal() { $("scrim").classList.remove("open"); $("buildPlan").focus(); }
+  function done(title, txt) {
+    $("doneTitle").textContent = title; $("doneTxt").textContent = txt;
+    $("planView").classList.add("hidden"); $("doneView").classList.remove("hidden");
+    $("doneView").querySelector("button").focus();
+  }
+
+  $("buildPlan").addEventListener("click", openModal);
+  $("loanTerm").addEventListener("change", render);
+  $("ctaSave").addEventListener("click", () => {
+    const fits = plan.amt / plan.months <= DATA.income - DATA.spending;
+    const m = fits ? plan.amt / plan.months : DATA.saving;
+    done("Goal account opened", `Your ${plan.name} account is ready. ${money(m)} will move in automatically each month. (Demo only, no account was opened.)`);
+  });
+  $("ctaLoan").addEventListener("click", () => {
+    done("You're pre-qualified", `Based on your accounts with us, you could borrow ${money(plan.amt)} for ${plan.name}. Review your offer to continue. (Demo only, no credit check was made.)`);
+  });
+  document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", closeModal));
+  $("scrim").addEventListener("click", e => { if (e.target === $("scrim")) closeModal(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && $("scrim").classList.contains("open")) closeModal(); });
+
+  function setVersion(after) {
+    $("btnAfter").setAttribute("aria-pressed", after);
+    $("btnBefore").setAttribute("aria-pressed", !after);
+    $("goalTile").classList.toggle("hidden", !after);
+    $("emptySlot").classList.toggle("hidden", after);
+  }
+  $("btnBefore").addEventListener("click", () => setVersion(false));
+  $("btnAfter").addEventListener("click", () => setVersion(true));
+</script>
+</body>
+</html>
